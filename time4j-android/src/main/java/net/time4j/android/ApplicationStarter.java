@@ -218,7 +218,7 @@ public class ApplicationStarter {
 
     }
 
-    private static void prepareAssets(Context context) {
+    public static void prepareAssets(Context context) {
 
         if (!PREPARED.getAndSet(true)) {
             System.setProperty(
