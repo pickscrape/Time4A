@@ -1,4 +1,75 @@
-## [v3.33-2017?] not yet released
+## [v3.37-2017?] not yet released
+
+## [v3.36-2017c] published on 2017-10-23
+### Added
+- Moon phases [#676]
+- Illumination of moon [#702]
+- Historic calendar [#698]
+- New SolarTime.Calculator based on Dershowitz/Reingold [#701]
+- Static factory ChronoHistory.from(variantString) [#697]
+- Julian centuries with J2000-epoch [#693]
+
+### Changed
+- Update to TZDB-version 2017c [#703]
+- TimeLine-enhancement [#675]
+- German names of French Republican calendar months [#692]
+- Prevent calling some SolarTime.Builder-methods twice [#691]
+- Refine altitude-dependent calculation of solar time [#689]
+
+### Fixed
+- ChronoHistory.month()-annotation is incomplete [#696]
+
+## [v3.35-2017b] published on 2017-09-25
+### Added
+- New hemisphere-related methods in astronomical classes [#688]
+- Unit simulating Joda-behaviour for month-based durations [#687]
+
+### Changed
+- Parsing of "AM" or "PM" for all locales [#684]
+- Changes to CalendarUnit.keepingEndOfMonth() and atEndOfMonth() [#679]
+
+### Fixed
+- Zone name parsing should use string-prefix-matching [#686]
+- Duration parser tolerates trailing chars [#682]
+
+### Deprecated
+- Rename PlainTime.ISO_HOUR to HOUR_FROM_0_TO_24 [#685]
+
+## [v3.34-2017b] published on 2017-09-10
+### Added
+- Support for sunrise / sunset - calculations [#663]
+- Static validation methods for calendars [#666]
+- Twilight definition [#667]
+- Sunset as start-of-day (for islamic calendar etc) [#668]
+- Simplified version of JulianDay [#670]
+
+### Changed
+- Improve calculation of equation of time [#665]
+
+### Fixed
+- French revolutionary calendar not serializable [#664]
+
+## [v3.33-2017b] published on 2017-07-28
+### Added
+- French Revolutionary Calendar [#615]
+- New formatter method 'getPattern()' [#662]
+- Support for or-logic during printing [#661]
+- Prevent escaping of Z-literal in format patterns [#658]
+- Direct parse-methods for Weekday, Quarter and Month [#656]
+- Weekday-in-month in non-iso-calendars [#653]
+- Alternative calculations for PersianCalendar [#634]
+- Calculation of astronomical seasons [#628]
+- Support for apparent solar time [#633]
+- Support for Julian Day Number [#527]
+- Implement timescales TT and UT1 [#93]
+- New dynamic pattern type [#659]
+
+### Changed
+- Redefine value space and epoch of TAI [#652]
+
+### Deprecated
+- Make PatternType-API fit for more calendars [#659]
+- Prepare StartOfDay-change for next major release [#655]
 
 ## [v3.32-2017b] published on 2017-04-28
 ### Added

@@ -212,6 +212,7 @@ public final class ChronoFormatter<T>
 
     // serves for optimization
     private final boolean hasOptionals;
+    private final boolean hasOrMarkers;
     private final boolean needsHistorization;
     private final boolean needsExtensions;
     private final int countOfElements;
@@ -253,12 +254,16 @@ public final class ChronoFormatter<T>
 
         FractionProcessor fp = null;
         boolean ho = false;
+        boolean hm = false;
         boolean nh = false;
         boolean dp = false;
         int co = 0;
         boolean ix = true;
 
         for (FormatStep step : steps) {
+            if (step.isNewOrBlockStarted()) {
+                hm = true;
+            }
             if ((fp == null) && step.getProcessor() instanceof FractionProcessor) {
                 fp = FractionProcessor.class.cast(step.getProcessor());
             }
@@ -281,6 +286,7 @@ public final class ChronoFormatter<T>
 
         this.fracproc = fp;
         this.hasOptionals = ho;
+        this.hasOrMarkers = hm;
         this.needsHistorization = nh;
         this.countOfElements = co;
         this.indexable = ix;
@@ -343,6 +349,7 @@ public final class ChronoFormatter<T>
         this.defaults = Collections.unmodifiableMap(new NonAmbivalentMap(old.defaults));
         this.fracproc = old.fracproc;
         this.hasOptionals = old.hasOptionals;
+        this.hasOrMarkers = old.hasOrMarkers;
         this.needsHistorization = (old.needsHistorization || (history != null));
         this.needsExtensions = (old.needsExtensions || this.needsHistorization);
         this.countOfElements = old.countOfElements;
@@ -445,6 +452,7 @@ public final class ChronoFormatter<T>
         this.leniency = formatter.leniency;
         this.fracproc = formatter.fracproc;
         this.hasOptionals = formatter.hasOptionals;
+        this.hasOrMarkers = formatter.hasOrMarkers;
         this.needsHistorization = formatter.needsHistorization;
         this.needsExtensions = formatter.needsExtensions;
         this.countOfElements = formatter.countOfElements;
@@ -509,6 +517,32 @@ public final class ChronoFormatter<T>
     public Locale getLocale() {
 
         return this.globalAttributes.getLocale();
+
+    }
+
+    /**
+     * <p>Returns the format pattern when this formatter was constructed by pattern. </p>
+     *
+     * <p>If no pattern was used then this method will only yield an empty string. This is
+     * also true if more than one pattern was used via the builder so that there is no longer
+     * a unique pattern. </p>
+     *
+     * @return  pattern string, maybe empty
+     * @since   3.33/4.28
+     */
+    /*[deutsch]
+     * <p>Ermittelt das bei der Konstruktion dieses Formatierers verwendete Formatmuster. </p>
+     *
+     * <p>Wurde kein Formatmuster verwendet, liefert diese Methode nur eine leere Zeichenkette.
+     * Das ist auch der Fall, wenn &uuml;ber den <i>Builder</i> mehr als ein Formatmuster verwendet wird
+     * und daher kein eindeutiges Formatmuster vorliegt. </p>
+     *
+     * @return  pattern string, maybe empty
+     * @since   3.33/4.28
+     */
+    public String getPattern() {
+
+        return this.globalAttributes.get(Attributes.FORMAT_PATTERN, "");
 
     }
 
@@ -775,7 +809,7 @@ public final class ChronoFormatter<T>
 
     }
 
-    // also directly called by CustomizedProcessor
+    // also directly called by CustomizedProcessor and StyleProcessor
     Set<ElementPosition> print(
         ChronoDisplay formattable,
         Appendable buffer,
@@ -787,29 +821,147 @@ public final class ChronoFormatter<T>
             throw new NullPointerException("Missing text result buffer.");
         }
 
+        int index = 0;
+        int len = this.steps.size();
+
         Set<ElementPosition> positions = null;
         boolean quickPath = (attributes == this.globalAttributes);
 
         if (withPositions) {
-            positions = new LinkedHashSet<ElementPosition>(this.steps.size());
+            positions = new LinkedHashSet<ElementPosition>(len);
         }
 
-        try {
-            int index = 0;
-            int len = this.steps.size();
+        if (this.hasOrMarkers) {
+            Deque<StringBuilder> collectorStack = new LinkedList<StringBuilder>();
+            StringBuilder buf = new StringBuilder(len << 2);
+            collectorStack.push(buf);
+
+            Deque<Set<ElementPosition>> positionStack = null;
+            if (withPositions) {
+                positionStack = new LinkedList<Set<ElementPosition>>();
+                positionStack.push(positions);
+            }
+
+            int previous = 0;
+            int current = 0;
 
             while (index < len) {
                 FormatStep step = this.steps.get(index);
-                step.print(formattable, buffer, attributes, positions, quickPath);
+                current = step.getLevel();
+                int level = current;
 
-                if (step.isNewOrBlockStarted()) {
+                // Start einer optionalen Sektion: Stack erweitern
+                while (level > previous) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(collectorStack.peek());
+                    collectorStack.push(sb);
+                    if (withPositions) {
+                        positions = new LinkedHashSet<ElementPosition>();
+                        positions.addAll(positionStack.peek());
+                        positionStack.push(positions);
+                    }
+                    level--;
+                }
+
+                // Ende einer optionalen Sektion: Werte im Stack sichern
+                while (level < previous) {
+                    buf = collectorStack.pop();
+                    collectorStack.pop();
+                    collectorStack.push(buf);
+                    if (withPositions) {
+                        positions = positionStack.pop();
+                        positionStack.pop();
+                        positionStack.push(positions);
+                    }
+                    level++;
+                }
+
+                buf = collectorStack.peek();
+                if (withPositions) {
+                    positions = positionStack.peek();
+                }
+
+                RuntimeException re = null;
+                int printed = -1;
+
+                try {
+                    printed = step.print(formattable, buf, attributes, positions, quickPath);
+                } catch (ChronoException ex) {
+                    re = ex;
+                } catch (IllegalArgumentException ex) {
+                    re = ex;
+                }
+
+                if (printed == -1) {
+                    // Fehlerfall: nächsten oder-Block suchen
+                    int section = step.getSection();
+                    int last = index;
+
+                    if (!step.isNewOrBlockStarted()) {
+                        for (int j = index + 1; j < len; j++) {
+                            FormatStep test = this.steps.get(j);
+                            if (test.isNewOrBlockStarted() && (test.getSection() == section)) {
+                                last = j;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ((last > index) || step.isNewOrBlockStarted()) {
+                        // wenn gefunden, zum nächsten oder-Block springen
+                        collectorStack.pop();
+                        StringBuilder sb = new StringBuilder();
+                        if (!collectorStack.isEmpty()) {
+                            sb.append(collectorStack.peek());
+                        }
+                        collectorStack.push(sb);
+                        if (withPositions) {
+                            positionStack.pop();
+                            Set<ElementPosition> ep = new LinkedHashSet<ElementPosition>();
+                            if (!positionStack.isEmpty()) {
+                                ep.addAll(positionStack.peek());
+                            }
+                            positionStack.push(ep);
+                        }
+                        index = last;
+                    } else if (re == null) {
+                        throw new IllegalArgumentException("Not formattable: " + formattable);
+                    } else {
+                        throw new IllegalArgumentException("Not formattable: " + formattable, re);
+                    }
+                } else if (step.isNewOrBlockStarted()) {
                     index = step.skipTrailingOrBlocks();
                 }
 
+                // Schleifenzähler inkrementieren
+                previous = current;
                 index++;
             }
-        } catch (ChronoException ex) {
-            throw new IllegalArgumentException("Not formattable: " + formattable, ex);
+
+            // Verbleibende optionale Sektionen auflösen und Ergebnis schreiben
+            buf = collectorStack.peek();
+            collectorStack.clear();
+            buffer.append(buf);
+
+            if (withPositions) {
+                positions = positionStack.peek();
+                positionStack.clear();
+            }
+        } else {
+            try {
+                while (index < len) {
+                    FormatStep step = this.steps.get(index);
+                    step.print(formattable, buffer, attributes, positions, quickPath);
+
+                    if (step.isNewOrBlockStarted()) {
+                        index = step.skipTrailingOrBlocks();
+                    }
+
+                    index++;
+                }
+            } catch (ChronoException ex) {
+                throw new IllegalArgumentException("Not formattable: " + formattable, ex);
+            }
         }
 
         if (withPositions) {
@@ -1328,7 +1480,15 @@ public final class ChronoFormatter<T>
             throw new NullPointerException("Missing calendar history.");
         }
 
-        AttributeSet as = this.globalAttributes.withInternal(HistoricAttribute.CALENDAR_HISTORY, history);
+        Attributes attrs =
+            new Attributes.Builder()
+                .setAll(this.globalAttributes.getAttributes())
+                .setCalendarVariant(history.getVariant())
+                .build();
+        AttributeSet as =
+            this.globalAttributes
+                .withInternal(HistoricAttribute.CALENDAR_HISTORY, history)
+                .withAttributes(attrs);
         return new ChronoFormatter<T>(this, as, history);
 
     }
@@ -3074,17 +3234,23 @@ public final class ChronoFormatter<T>
             char c = pattern.charAt(i);
 
             if (c == '\'') {
-                i++;
-                while (i < n) {
-                    if (pattern.charAt(i) == '\'') {
-                        if ((i + 1 < n) && (pattern.charAt(i + 1) == '\'')) {
-                            i++;
+                int j = i + 1;
+                boolean z = (pattern.charAt(j) == 'Z');
+                while (j < n) {
+                    if (pattern.charAt(j) == '\'') {
+                        if ((j + 1 < n) && (pattern.charAt(j + 1) == '\'')) {
+                            j++;
                         } else {
+                            if (z && (j == i + 2) && Builder.hasUnixChronology(builder.chronology)) {
+                                throw new IllegalArgumentException(
+                                    "Z-literal (=UTC+00) should not be escaped: " + pattern);
+                            }
                             break;
                         }
                     }
-                    i++;
+                    j++;
                 }
+                i = j;
             } else {
                 sb.append(c);
             }
@@ -3095,6 +3261,7 @@ public final class ChronoFormatter<T>
         switch (type) {
             case CLDR:
             case CLDR_24:
+            case CLDR_DATE:
             case SIMPLE_DATE_FORMAT:
             case NON_ISO_DATE:
                 if (p.contains("h") || p.contains("K")) {
@@ -3184,7 +3351,7 @@ public final class ChronoFormatter<T>
                 (result instanceof PlainTimestamp)
                 && (PlainTimestamp.class.cast(result).getHour() == 0)
                 && (
-                    (parsed.getInt(PlainTime.ISO_HOUR) == 24)
+                    (parsed.getInt(PlainTime.HOUR_FROM_0_TO_24) == 24)
                     || (parsed.contains(PlainTime.COMPONENT) && (parsed.get(PlainTime.COMPONENT).getHour() == 24))
                 )
             ) {
@@ -3546,6 +3713,7 @@ public final class ChronoFormatter<T>
         private int sectionID;
         private int reservedIndex;
         private int leftPadWidth;
+        private String pattern;
         private DayPeriod dayPeriod;
         private Map<ChronoElement<?>, Object> defaultMap;
         private Chronology<?> deepestParser;
@@ -3582,6 +3750,7 @@ public final class ChronoFormatter<T>
             this.sectionID = 0;
             this.reservedIndex = -1;
             this.leftPadWidth = 0;
+            this.pattern = null;
             this.dayPeriod = null;
             this.defaultMap = new HashMap<ChronoElement<?>, Object>();
 
@@ -4975,6 +5144,8 @@ public final class ChronoFormatter<T>
                 }
             }
 
+            // ensure that pattern is only set if it is the only one
+            this.pattern = ((this.pattern == null) ? formatPattern : "");
             return this;
 
         }
@@ -6486,9 +6657,14 @@ public final class ChronoFormatter<T>
                     this.deepestParser
                 );
 
-            if (this.dayPeriod != null) {
+            if ((this.dayPeriod != null) || (this.pattern != null && !this.pattern.isEmpty())) {
                 AttributeSet as = formatter.globalAttributes;
-                as = as.withInternal(CUSTOM_DAY_PERIOD, this.dayPeriod);
+                if ((this.pattern != null) && !this.pattern.isEmpty()) {
+                    as = as.withInternal(Attributes.FORMAT_PATTERN, this.pattern);
+                }
+                if (this.dayPeriod != null) {
+                    as = as.withInternal(CUSTOM_DAY_PERIOD, this.dayPeriod);
+                }
                 formatter = new ChronoFormatter<T>(formatter, as);
             }
 

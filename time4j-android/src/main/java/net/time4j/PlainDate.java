@@ -1319,6 +1319,40 @@ public final class PlainDate
     }
 
     /**
+     * <p>Queries if given parameter values form a well defined calendar date. </p>
+     *
+     * <p>This method only checks the range limits, not if the date is historically correct. </p>
+     *
+     * @param   year        the proleptic year to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(int, int, int)
+     * @since   3.34/4.29
+     */
+    /*[deutsch]
+     * <p>Pr&uuml;ft, ob die angegebenen Parameter ein wohldefiniertes Kalenderdatum beschreiben. </p>
+     *
+     * <p>Hier werden nur die Bereichsgrenzen &uuml;berpr&uuml;ft, nicht die historische Sinnhaftigkeit. </p>
+     *
+     * @param   year        the proleptic year to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(int, int, int)
+     * @since   3.34/4.29
+     */
+    public static boolean isValid(
+        int year,
+        int month,
+        int dayOfMonth
+    ) {
+
+        return GregorianMath.isValid(year, month, dayOfMonth);
+
+    }
+
+    /**
      * <p>Creates a new formatter which uses the given pattern in the
      * default locale for formatting and parsing plain dates. </p>
      *
@@ -1721,16 +1755,7 @@ public final class PlainDate
                     MathUtils.safeMultiply(amount, 7),
                     policy);
             case DAYS:
-                PlainDate date = addDays(context, amount);
-                if (policy == OverflowUnit.POLICY_END_OF_MONTH) {
-                    return PlainDate.of(
-                        date.year,
-                        date.month,
-                        GregorianMath.getLengthOfMonth(date.year, date.month)
-                    );
-                } else {
-                    return date;
-                }
+                return addDays(context, amount);
             default:
                 throw new UnsupportedOperationException(unit.name());
         }
@@ -1945,6 +1970,7 @@ public final class PlainDate
                 case OverflowUnit.POLICY_PREVIOUS_VALID_DATE:
                 case OverflowUnit.POLICY_END_OF_MONTH:
                 case OverflowUnit.POLICY_KEEPING_LAST_DATE:
+                case OverflowUnit.POLICY_JODA_METRIC:
                     dom = max;
                     break;
                 case OverflowUnit.POLICY_NEXT_VALID_DATE:

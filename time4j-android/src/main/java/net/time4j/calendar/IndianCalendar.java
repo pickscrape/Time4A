@@ -87,6 +87,7 @@ import java.util.Locale;
  *  <li>{@link #DAY_OF_WEEK}</li>
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
  *  <li>{@link #YEAR_OF_ERA}</li>
  *  <li>{@link #ERA}</li>
@@ -132,6 +133,7 @@ import java.util.Locale;
  *  <li>{@link #DAY_OF_WEEK}</li>
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
  *  <li>{@link #YEAR_OF_ERA}</li>
  *  <li>{@link #ERA}</li>
@@ -255,6 +257,18 @@ public final class IndianCalendar
     public static final StdCalendarElement<Weekday, IndianCalendar> DAY_OF_WEEK =
         new StdWeekdayElement<IndianCalendar>(IndianCalendar.class, getDefaultWeekmodel());
 
+    private static final WeekdayInMonthElement<IndianCalendar> WIM_ELEMENT =
+        new WeekdayInMonthElement<IndianCalendar>(IndianCalendar.class, DAY_OF_MONTH, DAY_OF_WEEK);
+
+    /**
+     * <p>Element with the ordinal day-of-week within given calendar month. </p>
+     */
+    /*[deutsch]
+     * <p>Element mit dem x-ten Wochentag im Monat. </p>
+     */
+    @FormattableElement(format = "F")
+    public static final OrdinalWeekdayElement<IndianCalendar> WEEKDAY_IN_MONTH = WIM_ELEMENT;
+
     private static final EraYearMonthDaySystem<IndianCalendar> CALSYS;
     private static final TimeAxis<IndianCalendar.Unit, IndianCalendar> ENGINE;
 
@@ -290,6 +304,9 @@ public final class IndianCalendar
                 DAY_OF_WEEK,
                 new WeekdayRule(),
                 Unit.DAYS)
+            .appendElement(
+                WIM_ELEMENT,
+                WeekdayInMonthElement.getRule(WIM_ELEMENT))
             .appendElement(
                 CommonElements.RELATED_GREGORIAN_YEAR,
                 new RelatedGregorianYearRule<IndianCalendar>(CALSYS, DAY_OF_YEAR))
@@ -578,6 +595,36 @@ public final class IndianCalendar
     public boolean isLeapYear() {
 
         return GregorianMath.isLeapYear(this.iyear + 78);
+
+    }
+
+    /**
+     * <p>Queries if given parameter values form a well defined calendar date. </p>
+     *
+     * @param   yearOfEra   the year of era to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(int, int, int)
+     * @since   3.34/4.29
+     */
+    /*[deutsch]
+     * <p>Pr&uuml;ft, ob die angegebenen Parameter ein wohldefiniertes Kalenderdatum beschreiben. </p>
+     *
+     * @param   yearOfEra   the year of era to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(int, int, int)
+     * @since   3.34/4.29
+     */
+    public static boolean isValid(
+        int yearOfEra,
+        int month,
+        int dayOfMonth
+    ) {
+
+        return CALSYS.isValid(IndianEra.SAKA, yearOfEra, month, dayOfMonth);
 
     }
 

@@ -121,6 +121,7 @@ import static net.time4j.calendar.Nengo.Selector.*;
  *  <li>{@link #DAY_OF_WEEK}</li>
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
  *  <li>{@link #MONTH_AS_ORDINAL}</li>
  *  <li>{@link #KOKI_YEAR}</li>
@@ -195,6 +196,7 @@ import static net.time4j.calendar.Nengo.Selector.*;
  *  <li>{@link #DAY_OF_WEEK}</li>
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
  *  <li>{@link #MONTH_AS_ORDINAL}</li>
  *  <li>{@link #KOKI_YEAR}</li>
@@ -524,6 +526,18 @@ public final class JapaneseCalendar
     public static final StdCalendarElement<Weekday, JapaneseCalendar> DAY_OF_WEEK =
         new StdWeekdayElement<JapaneseCalendar>(JapaneseCalendar.class, getDefaultWeekmodel());
 
+    private static final WeekdayInMonthElement<JapaneseCalendar> WIM_ELEMENT =
+        new WeekdayInMonthElement<JapaneseCalendar>(JapaneseCalendar.class, DAY_OF_MONTH, DAY_OF_WEEK);
+
+    /**
+     * <p>Element with the ordinal day-of-week within given calendar month. </p>
+     */
+    /*[deutsch]
+     * <p>Element mit dem x-ten Wochentag im Monat. </p>
+     */
+    @FormattableElement(format = "F")
+    public static final OrdinalWeekdayElement<JapaneseCalendar> WEEKDAY_IN_MONTH = WIM_ELEMENT;
+
     private static final Transformer CALSYS;
     private static final TimeAxis<JapaneseCalendar.Unit, JapaneseCalendar> ENGINE;
 
@@ -564,6 +578,9 @@ public final class JapaneseCalendar
                 DAY_OF_WEEK,
                 new WeekdayRule(),
                 Unit.DAYS)
+            .appendElement(
+                WIM_ELEMENT,
+                WeekdayInMonthElement.getRule(WIM_ELEMENT))
             .appendElement(
                 KOKI_YEAR,
                 new IntegerRule(KOKI_INDEX),
@@ -644,11 +661,11 @@ public final class JapaneseCalendar
     /**
      * <p>Creates a modern Japanese calendar for all dates since Meiji 6 (gregorian calendar rules). </p>
      *
-     * <p>Equivalent to
+     * <p>Leaving the gregorian condition aside, equivalent to
      * {@code JapaneseCalendar.of(nengo, yearOfNengo, EastAsianMonth.valueOf(month), dayOfMonth, Leniency.SMART)}. </p>
      *
-     * @param   nengo           Japanese era
-     * @param   yearOfNengo     year of nengo starting with number 1
+     * @param   nengo           Japanese era (Meiji or later)
+     * @param   yearOfNengo     year of nengo starting with number 1 (if Meiji then starting with 6)
      * @param   month           gregorian month (1-12)
      * @param   dayOfMonth      day of month {@code >= 1}
      * @return  new instance of {@code JapaneseCalendar}
@@ -659,11 +676,11 @@ public final class JapaneseCalendar
      * <p>Erzeugt einen modernen japanischen Kalender f&uuml;r jedes Datum seit Meiji 6
      * (gregorianische Kalenderregeln). </p>
      *
-     * <p>&Auml;quivalent zu
+     * <p>Die gregorianische Bedingung au&szlig;er Acht lassend, &auml;quivalent zu
      * {@code JapaneseCalendar.of(nengo, yearOfNengo, EastAsianMonth.valueOf(month), dayOfMonth, Leniency.SMART)}. </p>
      *
-     * @param   nengo           Japanese era
-     * @param   yearOfNengo     year of nengo starting with number 1
+     * @param   nengo           Japanese era (Meiji or later)
+     * @param   yearOfNengo     year of nengo starting with number 1 (if Meiji then starting with 6)
      * @param   month           gregorian month (1-12)
      * @param   dayOfMonth      day of month {@code >= 1}
      * @return  new instance of {@code JapaneseCalendar}

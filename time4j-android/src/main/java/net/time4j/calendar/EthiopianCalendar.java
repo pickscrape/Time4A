@@ -88,6 +88,7 @@ import java.util.Locale;
  *  <li>{@link #DAY_OF_WEEK}</li>
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
  *  <li>{@link #YEAR_OF_ERA}</li>
  *  <li>{@link #ERA}</li>
@@ -132,6 +133,7 @@ import java.util.Locale;
  *  <li>{@link #DAY_OF_MONTH}</li>
  *  <li>{@link #DAY_OF_YEAR}</li>
  *  <li>{@link #MONTH_OF_YEAR}</li>
+ *  <li>{@link #WEEKDAY_IN_MONTH}</li>
  *  <li>{@link #YEAR_OF_ERA}</li>
  *  <li>{@link #ERA}</li>
  *  <li>{@link #EVANGELIST}</li>
@@ -276,6 +278,18 @@ public final class EthiopianCalendar
     public static final StdCalendarElement<Weekday, EthiopianCalendar> DAY_OF_WEEK =
         new StdWeekdayElement<EthiopianCalendar>(EthiopianCalendar.class, getDefaultWeekmodel());
 
+    private static final WeekdayInMonthElement<EthiopianCalendar> WIM_ELEMENT =
+        new WeekdayInMonthElement<EthiopianCalendar>(EthiopianCalendar.class, DAY_OF_MONTH, DAY_OF_WEEK);
+
+    /**
+     * <p>Element with the ordinal day-of-week within given calendar month. </p>
+     */
+    /*[deutsch]
+     * <p>Element mit dem x-ten Wochentag im Monat. </p>
+     */
+    @FormattableElement(format = "F")
+    public static final OrdinalWeekdayElement<EthiopianCalendar> WEEKDAY_IN_MONTH = WIM_ELEMENT;
+
     /**
      * <p>Represents the evangelist associated with a year of the Ethiopian leap year cycle. </p>
      *
@@ -360,6 +374,9 @@ public final class EthiopianCalendar
                 DAY_OF_WEEK,
                 new WeekdayRule(),
                 Unit.DAYS)
+            .appendElement(
+                WIM_ELEMENT,
+                WeekdayInMonthElement.getRule(WIM_ELEMENT))
             .appendElement(
                 CommonElements.RELATED_GREGORIAN_YEAR,
                 new RelatedGregorianYearRule<EthiopianCalendar>(CALSYS, DAY_OF_YEAR))
@@ -709,6 +726,39 @@ public final class EthiopianCalendar
     public boolean isLeapYear() {
 
         return ((this.getYear() % 4) == 3);
+
+    }
+
+    /**
+     * <p>Queries if given parameter values form a well defined calendar date. </p>
+     *
+     * @param   era         the era to be checked
+     * @param   yearOfEra   the year of era to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(EthiopianEra, int, int, int)
+     * @since   3.34/4.29
+     */
+    /*[deutsch]
+     * <p>Pr&uuml;ft, ob die angegebenen Parameter ein wohldefiniertes Kalenderdatum beschreiben. </p>
+     *
+     * @param   era         the era to be checked
+     * @param   yearOfEra   the year of era to be checked
+     * @param   month       the month to be checked
+     * @param   dayOfMonth  the day of month to be checked
+     * @return  {@code true} if valid else  {@code false}
+     * @see     #of(EthiopianEra, int, int, int)
+     * @since   3.34/4.29
+     */
+    public static boolean isValid(
+        EthiopianEra era,
+        int yearOfEra,
+        int month,
+        int dayOfMonth
+    ) {
+
+        return CALSYS.isValid(era, yearOfEra, month, dayOfMonth);
 
     }
 
